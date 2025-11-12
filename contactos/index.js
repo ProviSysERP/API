@@ -18,6 +18,7 @@ const dbName = 'ProviSys';
 // USUARIOS---> APARTADO DE LA API PARA CARGAR DATOS DE USUARIOS
 let usuarios; // colección compartida por las rutas
 let productos; // colección compartida por las rutas
+let posts;
 
 async function init() {
   const client = new MongoClient(uri);
@@ -27,6 +28,7 @@ async function init() {
   const db = client.db(dbName);
   usuarios = db.collection('usuarios');
   productos = db.collection('productos');
+  posts = db.collection('posts');
 
   // 👉 Ruta raíz de cortesía
   app.get('/', (req, res) => res.send('API Usuarios activa. Prueba GET /usuarios'));
@@ -41,6 +43,12 @@ async function init() {
   // GET /productos -> obtener uno por id_product
   app.get('/productos', async (req, res) => {
     const docs = await productos.find().toArray();
+    console.log(docs);
+    res.json(docs);
+  });
+
+  app.get('/posts',async (req,res)=>{
+    const docs=await posts.find().toArray();
     console.log(docs);
     res.json(docs);
   });
