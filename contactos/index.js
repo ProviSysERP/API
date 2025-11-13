@@ -21,6 +21,7 @@ let productos; // colección compartida por las rutas
 let posts;
 let pedidos;
 let proveedores;
+let relaciones;
 
 async function init() {
   const client = new MongoClient(uri);
@@ -33,6 +34,7 @@ async function init() {
   posts = db.collection('posts');
   proveedores = db.collection('proveedores');
   pedidos = db.collection('pedidos');
+  relaciones = db.collection('relaciones');
 
   // 👉 Ruta raíz de cortesía
   app.get('/', (req, res) => res.send('API Usuarios activa. Prueba GET /usuarios'));
@@ -40,6 +42,12 @@ async function init() {
   // 📄 GET /usuarios → listar todos
   app.get('/usuarios', async (req, res) => {
     const docs = await usuarios.find().toArray();
+    console.log(docs);
+    res.json(docs);
+  });
+
+  app.get('relaciones', async (req, res) => {
+    const docs = await relaciones.find().toArray();
     console.log(docs);
     res.json(docs);
   });
@@ -83,6 +91,16 @@ async function init() {
     const { id_user } = req.params;
     const id = parseInt(id_user);
     const doc = await usuarios.findOne({ id_user: id });
+
+    console.log(doc);
+    if (!doc) return res.status(404).json({ error: 'No encontrado' });
+    res.json(doc);
+  });
+    // 🔎 GET /posts/:id_product → obtener uno por id_user
+  app.get('/posts/:id_product', async (req, res) => {
+    const { id_product } = req.params;
+    const id = parseInt(id_product);
+    const doc = await posts.findOne({ id_product: id });
 
     console.log(doc);
     if (!doc) return res.status(404).json({ error: 'No encontrado' });
@@ -133,7 +151,7 @@ async function init() {
   // POST /Productos → crear
   app.post('/productos', async (req, res) => {
     const { name, description, price } = req.body;
-    if (!name || !description || !price) return res.status(400).json({ error: 'nombre, descripción y precio son obligatorios' });
+    if (!name || !description || !price ) return res.status(400).json({ error: 'nombre, descripción y precio son obligatorios' });
     const nuevo = { name, description, category, price, quantity, images, status, createdAt, updatedAt };
     const r = await productos.insertOne(nuevo);
     res.status(201).json({ id_product: r.insertedId, ...nuevo });
@@ -227,11 +245,9 @@ async function init() {
   // ❌ DELETE /usuarios/:id_user → borrar
   app.delete('/usuarios/:id_user', async (req, res) => {
     const { id_user } = req.params;
-    if (!ObjectId.isValid(id_user)) return res.status(400).json({ error: 'ID no válido' });
-
-    const r = await usuarios.deleteOne({ _id: new ObjectId(id_user) });
+    const id = parseInt(id_user);
+    const r = await usuarios.deleteOne({ id_user: id });
     if (r.deletedCount === 0) return res.status(404).json({ error: 'No encontrado' });
-
     res.status(204).send();
   });
 
