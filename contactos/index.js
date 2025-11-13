@@ -152,7 +152,7 @@ async function init() {
   app.post('/productos', async (req, res) => {
     const { name, description, price } = req.body;
     if (!name || !description || !price ) return res.status(400).json({ error: 'nombre, descripción y precio son obligatorios' });
-    const nuevo = { name, description, category, price, quantity, images, status, createdAt, updatedAt };
+    const nuevo = { name, description, category, price, quantity, images, statusProd, createdAt, updatedAt };
     const r = await productos.insertOne(nuevo);
     res.status(201).json({ id_product: r.insertedId, ...nuevo });
   });
