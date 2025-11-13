@@ -19,6 +19,7 @@ const dbName = 'ProviSys';
 let usuarios; // colección compartida por las rutas
 let productos; // colección compartida por las rutas
 let posts;
+let pedidos;
 let proveedores;
 
 async function init() {
@@ -31,6 +32,7 @@ async function init() {
   productos = db.collection('productos');
   posts = db.collection('posts');
   proveedores = db.collection('proveedores');
+  pedidos = db.collection('pedidos');
 
   // 👉 Ruta raíz de cortesía
   app.get('/', (req, res) => res.send('API Usuarios activa. Prueba GET /usuarios'));
@@ -50,10 +52,31 @@ async function init() {
   });
 
   app.get('/posts',async (req,res)=>{
-    const docs=await posts.find().toArray();
+    const docs= await posts.find().toArray();
     console.log(docs);
     res.json(docs);
   });
+
+
+   // 📄 GET /pedidos → listar todos
+  app.get('/pedidos', async (req, res) => {
+    const docs = await pedidos.find().toArray();
+    console.log(docs);
+    res.json(docs);
+  });
+
+   // 🔎 GET /pedidos/:id_delivery → obtener uno por id_delivery
+  app.get('/pedidos/:id_delivery', async (req, res) => {
+    const { id_delivery} = req.params;
+    const id = parseInt(id_delivery);
+    const doc = await pedidos.findOne({ id_delivery: id });
+
+    console.log(doc);
+    if (!doc) return res.status(404).json({ error: 'No encontrado' });
+    res.json(doc);
+  });
+
+
 
   // 🔎 GET /usuarios/:id_user → obtener uno por id_user
   app.get('/usuarios/:id_user', async (req, res) => {
@@ -65,6 +88,7 @@ async function init() {
     if (!doc) return res.status(404).json({ error: 'No encontrado' });
     res.json(doc);
   });
+
 
 //PROVEEDORES--> APARTADO DE LA API PARA CARGAR DATOS DE PROVEEDORES
 
@@ -114,6 +138,53 @@ async function init() {
     const r = await productos.insertOne(nuevo);
     res.status(201).json({ id_product: r.insertedId, ...nuevo });
   });
+
+ // POST /pedidos → crear nuevo pedido
+  app.post('/pedidos', async (req, res) => {
+    try{
+    const {id_delivery, id_provider, id_user, products, total_price, address, status, sent_date, recived_date} = req.body;
+    if(!id_delivery || !id_provider || !id_user || !products || !total_price || !address || !status) {
+      return res.status(400).json({error: 'Faltan campos obligatorios'});
+    }
+    //Validar que los campos tengan el formato correcto
+    if (
+        id_delivery === undefined ||
+        id_provider === undefined ||
+        id_user === undefined ||
+        !Array.isArray(products) ||
+        products.length === 0 ||
+        !address ||
+        !address.street ||
+        !address.city
+      ) {
+        return res.status(400).json({ error: 'Faltan campos obligatorios' });
+      }
+
+      const now = new Date(); //Creamos la fecha actual en la que se crea el pedido
+        //Creamos el objeto del nuevo pedido
+      const nuevoPedido = {
+        id_delivery,
+        id_provider,
+        id_user,
+        products,
+        total_price: total_price ?? 0,
+        address,
+        status: status ?? 'Pendiente',
+        sent_date: sent_date ? new Date(sent_date) : null,
+        received_date: received_date ? new Date(received_date) : null,
+        createdAt: now,
+        updatedAt: now,
+      };
+        //Insertamos el nuevo pedido en la coleccion de la base de datos MongoDB
+      const r = await pedidos.insertOne(nuevoPedido);
+      res.status(201).json({ _id: r.insertedId, ...nuevoPedido });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Error al crear el pedido' });
+    }
+    });
+  
+
 
   // 🔁 PUT /usuarios/:id_user → actualizar (parcial: solo campos enviados)
   app.put('/usuarios/:id_user', async (req, res) => {
