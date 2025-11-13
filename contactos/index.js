@@ -242,6 +242,55 @@ async function init() {
     res.json(actualizado);
   });
 
+  // PUT /pedidos/:id_delivery => actualizar (solo campos enviados)
+  app.put('/pedidos/:id_delivery', async (req, res) => {
+    try {
+      const { id_delivery } = req.params;
+      const id = parseInt(id_delivery);
+
+      if (isNaN(id)) return res.status(400).json({ error: 'id_delivery no válido' });
+
+      const {
+        id_provider,
+        id_user,
+        products,
+        total_price,
+        address,
+        status,
+        sent_date,
+        received_date,
+      } = req.body;
+
+      // Construimos el objeto con los campos enviados (solo los que vienen)
+      const set = {};
+      if (id_provider !== undefined) set.id_provider = id_provider;
+      if (id_user !== undefined) set.id_user = id_user;
+      if (products !== undefined) set.products = products;
+      if (total_price !== undefined) set.total_price = total_price;
+      if (address !== undefined) set.address = address;
+      if (status !== undefined) set.status = status;
+      if (sent_date !== undefined) set.sent_date = new Date(sent_date);
+      if (received_date !== undefined) set.received_date = new Date(received_date);
+
+      set.updatedAt = new Date(); // siempre actualizamos la fecha de modificación
+
+      if (Object.keys(set).length === 1 && set.updatedAt)
+        return res.status(400).json({ error: 'Nada que actualizar' });
+
+      const r = await pedidos.updateOne({ id_delivery: id }, { $set: set });
+
+      if (r.matchedCount === 0)
+        return res.status(404).json({ error: 'Pedido no encontrado' });
+
+      const actualizado = await pedidos.findOne({ id_delivery: id });
+      res.json(actualizado);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Error al actualizar el pedido' });
+    }
+  });
+
+
   // ❌ DELETE /usuarios/:id_user → borrar
   app.delete('/usuarios/:id_user', async (req, res) => {
     const { id_user } = req.params;
@@ -259,6 +308,26 @@ async function init() {
     if (r.deletedCount === 0) return res.status(404).json({ error: 'No encontrado' });
     res.status(204).send();
   });
+
+  //  DELETE /pedidos/:id_delivery → borrar
+ app.delete('/pedidos/:id_delivery', async (req, res) => {
+  try {
+    const { id_delivery } = req.params;
+    const id = parseInt(id_delivery);
+
+    if (isNaN(id)) return res.status(400).json({ error: 'id_delivery no válido' });
+
+    const r = await pedidos.deleteOne({ id_delivery: id });
+
+    if (r.deletedCount === 0)
+      return res.status(404).json({ error: 'Pedido no encontrado' });
+
+    res.status(204).send();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al eliminar el pedido' });
+  }
+});
 
   // ▶️ Arrancar Express
   app.listen(port, () => {
