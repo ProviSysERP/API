@@ -20,6 +20,7 @@ let usuarios; // colección compartida por las rutas
 let productos; // colección compartida por las rutas
 let posts;
 let proveedores;
+let relaciones;
 
 async function init() {
   const client = new MongoClient(uri);
@@ -31,6 +32,7 @@ async function init() {
   productos = db.collection('productos');
   posts = db.collection('posts');
   proveedores = db.collection('proveedores');
+  relaciones = db.collection('relaciones');
 
   // 👉 Ruta raíz de cortesía
   app.get('/', (req, res) => res.send('API Usuarios activa. Prueba GET /usuarios'));
@@ -38,6 +40,12 @@ async function init() {
   // 📄 GET /usuarios → listar todos
   app.get('/usuarios', async (req, res) => {
     const docs = await usuarios.find().toArray();
+    console.log(docs);
+    res.json(docs);
+  });
+
+  app.get('relaciones', async (req, res) => {
+    const docs = await relaciones.find().toArray();
     console.log(docs);
     res.json(docs);
   });
