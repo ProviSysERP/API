@@ -78,16 +78,12 @@ async function init() {
     }
   });
 
-  app.get('/proveedores/:id', async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const doc = await proveedores.findOne({ id: id });
-      if (!doc) return res.status(404).json({ error: 'Proveedor no encontrado' });
-      res.json(doc);
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: 'Error al obtener proveedor' });
-    }
+  app.get('/proveedores/:id_provider', async (req, res) => {
+    const { id_provider } = req.params;
+    const id = parseInt(id_provider);
+    const doc = await proveedores.findOne({ id_provider: id });
+    if (!doc) return res.status(404).json({ error: 'No encontrado' });
+    res.json(doc);
   });
 
   // GET /productos/:id_product -> obtener uno por id_product
