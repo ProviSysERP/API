@@ -65,6 +65,16 @@ async function init() {
     if (!doc) return res.status(404).json({ error: 'No encontrado' });
     res.json(doc);
   });
+    // 🔎 GET /posts/:id_product → obtener uno por id_user
+  app.get('/posts/:id_product', async (req, res) => {
+    const { id_product } = req.params;
+    const id = parseInt(id_product);
+    const doc = await posts.findOne({ id_product: id });
+
+    console.log(doc);
+    if (!doc) return res.status(404).json({ error: 'No encontrado' });
+    res.json(doc);
+  });
 
 //PROVEEDORES--> APARTADO DE LA API PARA CARGAR DATOS DE PROVEEDORES
 
