@@ -19,6 +19,7 @@ const dbName = 'ProviSys';
 let usuarios; // colección compartida por las rutas
 let productos; // colección compartida por las rutas
 let posts;
+let proveedores;
 
 async function init() {
   const client = new MongoClient(uri);
@@ -29,6 +30,7 @@ async function init() {
   usuarios = db.collection('usuarios');
   productos = db.collection('productos');
   posts = db.collection('posts');
+  proveedores = db.collection('proveedores');
 
   // 👉 Ruta raíz de cortesía
   app.get('/', (req, res) => res.send('API Usuarios activa. Prueba GET /usuarios'));
@@ -62,6 +64,30 @@ async function init() {
     console.log(doc);
     if (!doc) return res.status(404).json({ error: 'No encontrado' });
     res.json(doc);
+  });
+
+//PROVEEDORES--> APARTADO DE LA API PARA CARGAR DATOS DE PROVEEDORES
+
+  app.get('/proveedores', async (req, res) => {
+    try {
+      const docs = await proveedores.find().toArray();
+      res.json(docs);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Error al obtener proveedores' });
+    }
+  });
+
+  app.get('/proveedores/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const doc = await proveedores.findOne({ id: id });
+      if (!doc) return res.status(404).json({ error: 'Proveedor no encontrado' });
+      res.json(doc);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Error al obtener proveedor' });
+    }
   });
 
   // GET /productos/:id_product -> obtener uno por id_product
