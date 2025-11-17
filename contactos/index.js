@@ -147,7 +147,6 @@ async function init() {
 
       return res.json({
         message: "Login exitoso",
-        usuario: db_user.nombre_usuario,
         access_token: token,
         token_type: "bearer",
       });
