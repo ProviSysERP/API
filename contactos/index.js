@@ -216,6 +216,14 @@ async function init() {
     res.json(doc);
   });
 
+  app.get('/proveedores/porProducto/:id_provider', async (req, res) => {
+    const { id_provider } = req.params;
+    const id = parseInt(id_provider);
+    const doc = await proveedores.findOne({ id_provider: id });
+    if (!doc) return res.status(404).json({ error: 'No encontrado' });
+    res.json(doc);
+  });
+
   // GET /productos/:id_product -> obtener uno por id_product
   app.get('/productos/:id_product', async (req, res) => {
     const { id_product } = req.params;
