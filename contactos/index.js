@@ -77,6 +77,11 @@ async function init() {
       return res.status(400).json({ error: 'Todos los campos de dirección son obligatorios' });
     }
       
+    const usuarioExistente = await usuarios.findOne({ email });
+    if (usuarioExistente) {
+      return res.status(400).json({ error: 'El email ya está en uso' });
+    }
+
     // Hash de la contraseña
     const passwordHash = await bcrypt.hash(password, 10);
     const now = new Date();
@@ -119,10 +124,10 @@ async function init() {
       const { name, password } = req.body;
 
       // Buscar usuario por name
-      const db_user = await usuarios.findOne({ name });
+      const db_user = await usuarios.findOne({ email });
 
       if (!db_user) {
-        return res.status(400).json({ detail: "Nombre de usuario incorrecto" });
+        return res.status(400).json({ detail: "Correo incorrecto" });
       }
 
       // Comprobar contraseña
