@@ -159,10 +159,10 @@ async function init() {
     }
   });
 
-  app.get('/proveedores/:id_provider', async (req, res) => {
+  app.get('/proveedores/:id_user', async (req, res) => {
     const { id_provider } = req.params;
     const id = parseInt(id_provider);
-    const doc = await proveedores.findOne({ id_provider: id });
+    const doc = await proveedores.findOne({ id_user: id });
     if (!doc) return res.status(404).json({ error: 'No encontrado' });
     res.json(doc);
   });
