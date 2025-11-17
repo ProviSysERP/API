@@ -121,7 +121,7 @@ async function init() {
   });
   
   app.post('/Login', async (req, res) => {
-      const { name, password } = req.body;
+      const { email, password } = req.body;
 
       // Buscar usuario por name
       const db_user = await usuarios.findOne({ email });
@@ -147,6 +147,7 @@ async function init() {
 
       return res.json({
         message: "Login exitoso",
+        usuario: db_user.nombre_usuario,
         access_token: token,
         token_type: "bearer",
       });
