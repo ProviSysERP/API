@@ -61,22 +61,58 @@ async function init() {
   });
 
     app.post('/registrar', async (req, res) => {
-    const { name, email, profile_picture, password } = req.body;
+    const { name, email, notifications, profile_picture, password, phone, address } = req.body;
 
-    if (!name || !email || !profile_picture || !password)
-      return res.status(400).json({ error: 'nombre, email, foto de perfil y contraseña son obligatorios' });
+    if (!name || !email || !profile_picture || !password || !phone)
+      return res.status(400).json({ error: 'nombre, email, foto de perfil, contraseña y telefono son obligatorios' });
 
+
+    if (!address || typeof address !== 'object') {
+      return res.status(400).json({ error: 'El campo address es obligatorio y debe ser un objeto' });
+    }
+
+    const { street, city, state, postalcode, country } = address;
+
+    if (!street || !city || !state || !postalcode || !country) {
+      return res.status(400).json({ error: 'Todos los campos de dirección son obligatorios' });
+    }
+      
     // Hash de la contraseña
     const passwordHash = await bcrypt.hash(password, 10);
+    const now = new Date();
+
 
     // Generar un id_user único
     const ultimoUsuario = await usuarios.find().sort({ id_user: -1 }).limit(1).toArray();
     const nuevoIdUser = ultimoUsuario.length > 0 ? ultimoUsuario[0].id_user + 1 : 1;
 
-    const nuevo = { id_user: nuevoIdUser, name, email, profile_picture, passwordHash };
+    const nuevo = { 
+      id_user: nuevoIdUser, 
+      name, 
+      email, 
+      notifications, 
+      profile_picture, 
+      passwordHash, phone, 
+      provider: false, 
+      admin: false, 
+      address: 
+        {
+          street,
+          city,
+          state,
+          postalcode: Number(postalcode),
+          country
+        },
+      createdAt: now,
+      updatedAt: now
+    };
 
-    const r = await usuarios.insertOne(nuevo);
-    res.status(201).json({ id_user: nuevoIdUser, ...nuevo });
+    await usuarios.insertOne(nuevo);
+    res.status(201).json({
+      message: "Usuario registrado correctamente",
+      id_user: nuevoIdUser,
+      ...nuevo
+    });
   });
   
   app.post('/Login', async (req, res) => {
