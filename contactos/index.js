@@ -172,9 +172,10 @@ async function init() {
 
         // Devolver solo los campos que quieras exponer
         res.json({id_user: usuario.id_user,});
+        console.log(usuario.id_user);
       } catch (err) {
-        console.error(err);
-        res.status(401).json({ error: 'Token inválido o expirado' });
+        console.warn("Token inválido o expirado");
+        return res.status(401).json({ error: 'Token inválido o expirado' });
       }
     });
 
