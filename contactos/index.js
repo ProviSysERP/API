@@ -25,6 +25,7 @@ let usuarios; // colección compartida por las rutas
 let productos; // colección compartida por las rutas
 let posts;
 let proveedores;
+let pedidos;
 
 async function init() {
   const client = new MongoClient(uri);
@@ -36,6 +37,7 @@ async function init() {
   productos = db.collection('productos');
   posts = db.collection('posts');
   proveedores = db.collection('proveedores');
+  pedidos = db.collection('pedidos');
 
   // 👉 Ruta raíz de cortesía
   app.get('/', (req, res) => res.send('API Usuarios activa. Prueba GET /usuarios'));
@@ -44,6 +46,11 @@ async function init() {
   app.get('/usuarios', async (req, res) => {
     const docs = await usuarios.find().toArray();
     //console.log(docs);
+    res.json(docs);
+  });
+
+ app.get('/pedidos', async (req, res) => {
+    const docs = await pedidos.find().toArray();
     res.json(docs);
   });
 
@@ -243,6 +250,16 @@ async function init() {
     const r = await productos.insertOne(nuevo);
     res.status(201).json({ id_product: r.insertedId, ...nuevo });
   });
+
+app.post('/pedidos', async (req, res) => {
+  const { id_provider, id_user, products, total_price, address, status } = req.body;
+  if (!id_user || !products || !total_price) { return res.status(400).json({ error: 'id_user, products y total_price son obligatorios' });}
+  const createdAt = new Date();
+  const updatedAt = new Date();
+  const nuevo = {id_provider, id_user, products, total_price, address: address || null, status: status || "Pendiente", sent_date: null, received_date: null, createdAt, updatedAt};
+  const r = await pedidos.insertOne(nuevo);
+  res.status(201).json({id_delivery: r.insertedId, ...nuevo});
+});
 
   // 🔁 PUT /usuarios/:id_user → actualizar (parcial: solo campos enviados)
   app.put('/usuarios/:id_user', async (req, res) => {
