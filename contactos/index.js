@@ -26,6 +26,7 @@ let productos; // colección compartida por las rutas
 let posts;
 let proveedores;
 let pedidos;
+let mensajes;
 
 async function init() {
   const client = new MongoClient(uri);
@@ -38,6 +39,7 @@ async function init() {
   posts = db.collection('posts');
   proveedores = db.collection('proveedores');
   pedidos = db.collection('pedidos');
+  mensajes = db.collection('mensajes');
 
   // 👉 Ruta raíz de cortesía
   app.get('/', (req, res) => res.send('API Usuarios activa. Prueba GET /usuarios'));
@@ -243,9 +245,10 @@ async function init() {
   });
 
   app.get('/mensajes/:id_user', async (req, res) => {
+
     const { id_user } = req.params;
     const id = parseInt(id_user);
-    const doc = await posts.find({ $or: [{ user1: id }, { user2: id }] }).toArray();
+    const doc = await mensajes.find({ $or: [{ user1: id }, { user2: id }] }).toArray();
 
     if (doc.length === 0) return res.status(404).json({ error: 'No encontrado' });
 
