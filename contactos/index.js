@@ -235,6 +235,16 @@ async function init() {
     res.json(doc);
   });
 
+  app.get('/mensajes/:id_user', async (req, res) => {
+    const { id_user } = req.params;
+    const id = parseInt(id_user);
+    const doc = await posts.find({ $or: [{ user1: id }, { user2: id }] }).toArray();
+
+    if (doc.length === 0) return res.status(404).json({ error: 'No encontrado' });
+
+    res.json(doc);
+  });
+
   // POST /Productos → crear
   app.post('/productos', async (req, res) => {
     const { name, description, price } = req.body;
