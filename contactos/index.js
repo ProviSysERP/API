@@ -51,7 +51,7 @@ async function init() {
     res.json(docs);
   });
 
- app.get('/pedidos', async (req, res) => {
+  app.get('/pedidos', async (req, res) => {
     const docs = await pedidos.find().toArray();
     res.json(docs);
   });
@@ -63,13 +63,13 @@ async function init() {
     res.json(docs);
   });
 
-  app.get('/posts',async (req,res)=>{
-    const docs=await posts.find().toArray();
+  app.get('/posts', async (req, res) => {
+    const docs = await posts.find().toArray();
     //console.log(docs);
     res.json(docs);
   });
 
-    app.post('/registrar', async (req, res) => {
+  app.post('/registrar', async (req, res) => {
     const { name, email, notifications, profile_picture, password, phone, address } = req.body;
 
     if (!name || !email || !profile_picture || !password || !phone)
@@ -85,7 +85,7 @@ async function init() {
     if (!street || !city || !state || !postalcode || !country) {
       return res.status(400).json({ error: 'Todos los campos de dirección son obligatorios' });
     }
-      
+
     const usuarioExistente = await usuarios.findOne({ email });
     if (usuarioExistente) {
       return res.status(400).json({ error: 'El email ya está en uso' });
@@ -100,23 +100,23 @@ async function init() {
     const ultimoUsuario = await usuarios.find().sort({ id_user: -1 }).limit(1).toArray();
     const nuevoIdUser = ultimoUsuario.length > 0 ? ultimoUsuario[0].id_user + 1 : 1;
 
-    const nuevo = { 
-      id_user: nuevoIdUser, 
-      name, 
-      email, 
-      notifications, 
-      profile_picture, 
-      passwordHash, phone, 
-      provider: false, 
-      admin: false, 
-      address: 
-        {
-          street,
-          city,
-          state,
-          postalcode: Number(postalcode),
-          country
-        },
+    const nuevo = {
+      id_user: nuevoIdUser,
+      name,
+      email,
+      notifications,
+      profile_picture,
+      passwordHash, phone,
+      provider: false,
+      admin: false,
+      address:
+      {
+        street,
+        city,
+        state,
+        postalcode: Number(postalcode),
+        country
+      },
       createdAt: now,
       updatedAt: now
     };
@@ -128,77 +128,77 @@ async function init() {
       ...nuevo
     });
   });
-  
+
   app.post('/Login', async (req, res) => {
-      const { email, password } = req.body;
+    const { email, password } = req.body;
 
-      // Buscar usuario por name
-      const db_user = await usuarios.findOne({ email });
+    // Buscar usuario por name
+    const db_user = await usuarios.findOne({ email });
 
-      if (!db_user) {
-        return res.status(400).json({ detail: "Correo incorrecto" });
-      }
+    if (!db_user) {
+      return res.status(400).json({ detail: "Correo incorrecto" });
+    }
 
-      // Comprobar contraseña
-      const passwordMatch = await bcrypt.compare(password, db_user.passwordHash);
+    // Comprobar contraseña
+    const passwordMatch = await bcrypt.compare(password, db_user.passwordHash);
 
 
-      if (!passwordMatch) {
-        return res.status(400).json({ detail: "Contraseña incorrecta" });
-      }
+    if (!passwordMatch) {
+      return res.status(400).json({ detail: "Contraseña incorrecta" });
+    }
 
-      // Crear token
-      const token = jwt.sign(
-        { sub: String(db_user.id_user) },
-        SECRET_KEY,
-        { expiresIn: EXPIRES_IN }
-      );
+    // Crear token
+    const token = jwt.sign(
+      { sub: String(db_user.id_user) },
+      SECRET_KEY,
+      { expiresIn: EXPIRES_IN }
+    );
 
-      return res.json({
-        message: "Login exitoso",
-        usuario: db_user.nombre_usuario,
-        access_token: token,
-        token_type: "bearer",
-      });
+    return res.json({
+      message: "Login exitoso",
+      usuario: db_user.nombre_usuario,
+      access_token: token,
+      token_type: "bearer",
     });
+  });
 
-    app.get('/usuarios/me', async (req, res) => {
-      const authHeader = req.headers.authorization;
-      if (!authHeader) return res.status(401).json({ error: 'No autorizado' });
+  app.get('/usuarios/me', async (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: 'No autorizado' });
 
-      // Obtener el token del header "Bearer <token>"
-      const token = authHeader.split(' ')[1];
-      if (!token) return res.status(401).json({ error: 'Token inválido' });
+    // Obtener el token del header "Bearer <token>"
+    const token = authHeader.split(' ')[1];
+    if (!token) return res.status(401).json({ error: 'Token inválido' });
 
-      try {
-        // Verificar token JWT
-        const payload = jwt.verify(token, SECRET_KEY);
+    try {
+      // Verificar token JWT
+      const payload = jwt.verify(token, SECRET_KEY);
 
-        // Buscar usuario por id_user almacenado en el token
-        const usuario = await usuarios.findOne({ id_user: parseInt(payload.sub) });
+      // Buscar usuario por id_user almacenado en el token
+      const usuario = await usuarios.findOne({ id_user: parseInt(payload.sub) });
 
-        if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado' });
+      if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado' });
 
-        // Devolver solo los campos que quieras exponer
-        res.json({id_user: usuario.id_user,});
-        console.log(usuario.id_user);
-      } catch (err) {
-        console.warn("Token inválido o expirado");
-        return res.status(401).json({ error: 'Token inválido o expirado' });
-      }
-    });
+      // Devolver solo los campos que quieras exponer
+      res.json({ id_user: usuario.id_user, });
+      console.log(usuario.id_user);
+    } catch (err) {
+      console.warn("Token inválido o expirado");
+      return res.status(401).json({ error: 'Token inválido o expirado' });
+    }
+  });
 
-    // 🔎 GET /usuarios/:id_user → obtener uno por id_user
-    app.get('/usuarios/:id_user', async (req, res) => {
-      const { id_user } = req.params;
-      const id = parseInt(id_user);
-      const doc = await usuarios.findOne({ id_user: id });
+  // 🔎 GET /usuarios/:id_user → obtener uno por id_user
+  app.get('/usuarios/:id_user', async (req, res) => {
+    const { id_user } = req.params;
+    const id = parseInt(id_user);
+    const doc = await usuarios.findOne({ id_user: id });
 
-      //console.log(doc);
-      if (!doc) return res.status(404).json({ error: 'No encontrado' });
-      res.json(doc);
-    });
-//PROVEEDORES--> APARTADO DE LA API PARA CARGAR DATOS DE PROVEEDORES
+    //console.log(doc);
+    if (!doc) return res.status(404).json({ error: 'No encontrado' });
+    res.json(doc);
+  });
+  //PROVEEDORES--> APARTADO DE LA API PARA CARGAR DATOS DE PROVEEDORES
 
   app.get('/proveedores', async (req, res) => {
     try {
@@ -234,6 +234,43 @@ async function init() {
     res.json(doc);
   });
 
+// POST /proveedores/:id_provider/rating -> agregar una reseña
+  app.post('/proveedores/:id_provider/rating', async (req, res) => {
+    try {
+      const { id_provider } = req.params;
+      const { userId, score, comment } = req.body;
+
+      if (!userId || !score || !comment) {
+        return res.status(400).json({ error: 'userId, score y comment son obligatorios' });
+      }
+
+      const proveedor = await proveedores.findOne({ id_provider: parseInt(id_provider) });
+      if (!proveedor) return res.status(404).json({ error: 'Proveedor no encontrado' });
+
+      const usuario = await usuarios.findOne({ id_user: userId });
+      const author = usuario ? usuario.name : "Anónimo";
+
+      const nuevaReseña = {
+        userId,
+        score,
+        comment,
+        author,
+        createdAt: new Date()
+      };
+
+      //Añadir la reseña al array del proveedor
+      await proveedores.updateOne(
+        { id_provider: parseInt(id_provider) },
+        { $push: { rating: nuevaReseña }, $set: { updatedAt: new Date() } }
+      );
+
+      res.status(201).json(nuevaReseña);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Error al agregar reseña' });
+    }
+  });
+
   // GET /productos/:id_product -> obtener uno por id_product
   app.get('/productos/:id_product', async (req, res) => {
     const { id_product } = req.params;
@@ -264,15 +301,15 @@ async function init() {
     res.status(201).json({ id_product: r.insertedId, ...nuevo });
   });
 
-app.post('/pedidos', async (req, res) => {
-  const { id_provider, id_user, products, total_price, address, status } = req.body;
-  if (!id_user || !products || !total_price) { return res.status(400).json({ error: 'id_user, products y total_price son obligatorios' });}
-  const createdAt = new Date();
-  const updatedAt = new Date();
-  const nuevo = {id_provider, id_user, products, total_price, address: address || null, status: status || "Pendiente", sent_date: null, received_date: null, createdAt, updatedAt};
-  const r = await pedidos.insertOne(nuevo);
-  res.status(201).json({id_delivery: r.insertedId, ...nuevo});
-});
+  app.post('/pedidos', async (req, res) => {
+    const { id_provider, id_user, products, total_price, address, status } = req.body;
+    if (!id_user || !products || !total_price) { return res.status(400).json({ error: 'id_user, products y total_price son obligatorios' }); }
+    const createdAt = new Date();
+    const updatedAt = new Date();
+    const nuevo = { id_provider, id_user, products, total_price, address: address || null, status: status || "Pendiente", sent_date: null, received_date: null, createdAt, updatedAt };
+    const r = await pedidos.insertOne(nuevo);
+    res.status(201).json({ id_delivery: r.insertedId, ...nuevo });
+  });
 
   // 🔁 PUT /usuarios/:id_user → actualizar (parcial: solo campos enviados)
   app.put('/usuarios/:id_user', async (req, res) => {
@@ -282,7 +319,7 @@ app.post('/pedidos', async (req, res) => {
     const { name, email, profile_picture } = req.body;
     const set = {};
     if (name !== undefined) set.name = name;
-    if (email  !== undefined) set.email  = email;
+    if (email !== undefined) set.email = email;
     if (profile_picture !== undefined) set.profile_picture = profile_picture;
 
     if (Object.keys(set).length === 0) return res.status(400).json({ error: 'Nada que actualizar' });
@@ -302,7 +339,7 @@ app.post('/pedidos', async (req, res) => {
     const { name, description, price } = req.body;
     const set = {};
     if (name !== undefined) set.name = name;
-    if (description  !== undefined) set.description  = description;
+    if (description !== undefined) set.description = description;
     if (price !== undefined) set.price = price;
     if (Object.keys(set).length === 0) return res.status(400).json({ error: 'Nada que actualizar' });
 
@@ -333,24 +370,24 @@ app.post('/pedidos', async (req, res) => {
   });
 
   //  DELETE /pedidos/:id_delivery → borrar
- app.delete('/pedidos/:id_delivery', async (req, res) => {
-  try {
-    const { id_delivery } = req.params;
-    const id = parseInt(id_delivery);
+  app.delete('/pedidos/:id_delivery', async (req, res) => {
+    try {
+      const { id_delivery } = req.params;
+      const id = parseInt(id_delivery);
 
-    if (isNaN(id)) return res.status(400).json({ error: 'ID no válido' });
+      if (isNaN(id)) return res.status(400).json({ error: 'ID no válido' });
 
-    const r = await pedidos.deleteOne({ id_delivery: id });
+      const r = await pedidos.deleteOne({ id_delivery: id });
 
-    if (r.deletedCount === 0)
-      return res.status(404).json({ error: 'Pedido no encontrado' });
+      if (r.deletedCount === 0)
+        return res.status(404).json({ error: 'Pedido no encontrado' });
 
-    res.status(204).send();
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Error al eliminar el pedido' });
-  }
-});
+      res.status(204).send();
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Error al eliminar el pedido' });
+    }
+  });
 
   // ▶️ Arrancar Express
   app.listen(port, () => {
