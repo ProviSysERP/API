@@ -312,6 +312,22 @@ app.post('/pedidos', async (req, res) => {
     res.json(actualizado);
   });
 
+  app.put('/mensajes/newMessage/:id_conversation', async (req, res) => {
+    const { id_conversation } = req.params;
+    const id = parseInt(id_conversation);
+    const { from_user, content } = req.body;
+    const newMessage = {
+      from_user,
+      content,
+      createdAt: new Date()
+    };
+
+    const r = await mensajes.updateOne({ id_conversation: id }, { $push: { messages: newMessage } });
+    if (r.matchedCount === 0) return res.status(404).json({ error: 'No encontrado' });
+    const actualizado = await mensajes.findOne({ id_conversation: id });
+    res.json(actualizado);
+  });
+
   // ❌ DELETE /usuarios/:id_user → borrar
   app.delete('/usuarios/:id_user', async (req, res) => {
     const { id_user } = req.params;
