@@ -332,6 +332,26 @@ app.post('/pedidos', async (req, res) => {
     res.status(204).send();
   });
 
+  //  DELETE /pedidos/:id_delivery → borrar
+ app.delete('/pedidos/:id_delivery', async (req, res) => {
+  try {
+    const { id_delivery } = req.params;
+    const id = parseInt(id_delivery);
+
+    if (isNaN(id)) return res.status(400).json({ error: 'ID no válido' });
+
+    const r = await pedidos.deleteOne({ id_delivery: id });
+
+    if (r.deletedCount === 0)
+      return res.status(404).json({ error: 'Pedido no encontrado' });
+
+    res.status(204).send();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al eliminar el pedido' });
+  }
+});
+
   // ▶️ Arrancar Express
   app.listen(port, () => {
     console.log(`🚀 API escuchando en http://localhost:${port}`);
