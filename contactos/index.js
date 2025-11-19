@@ -274,6 +274,19 @@ app.post('/pedidos', async (req, res) => {
   res.status(201).json({id_delivery: r.insertedId, ...nuevo});
 });
 
+app.post('/mensajes', async (req, res) => {
+  const { user1, user2 } = req.body;
+  if (!user1 || !user2) return res.status(400).json({ error: 'user1 y user2 son obligatorios' });
+  const newId = await mensajes.find().sort({ id_conversation: -1 }).limit(1).toArray();
+  const newConversationId = newId.length > 0 ? newId[0].id_conversation + 1 : 1;
+  const createdAt = new Date();
+  const updatedAt = new Date();
+  const nuevo = { id_conversation: newConversationId, user1, user2, messages: [], createdAt, updatedAt };
+
+  const r = await mensajes.insertOne(nuevo);
+  res.status(201).json({ id_conversation: r.insertedId, ...nuevo });
+});
+
   // 🔁 PUT /usuarios/:id_user → actualizar (parcial: solo campos enviados)
   app.put('/usuarios/:id_user', async (req, res) => {
     const { id_user } = req.params;
@@ -365,6 +378,21 @@ app.post('/pedidos', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al eliminar el pedido' });
+  }
+});
+
+app.delete('/mensajes/:id_conversation', async (req, res) => {
+  try {
+    const { id_conversation } = req.params;
+    const id = parseInt(id_conversation);
+    if (isNaN(id)) return res.status(400).json({ error: 'ID no válido' });
+
+    const r = await mensajes.deleteOne({ id_conversation: id });
+    if (r.deletedCount === 0) return res.status(404).json({ error: 'Conversación no encontrada' });
+    res.status(204).send();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al eliminar la conversación' });
   }
 });
 
