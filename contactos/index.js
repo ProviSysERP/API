@@ -20,9 +20,9 @@ const dbName = 'ProviSys';
 const SECRET_KEY = "MIDDLE-DEEP-HOME-TOOK-FLOOR";
 const EXPIRES_IN = "24h";
 
-// USUARIOS---> APARTADO DE LA API PARA CARGAR DATOS DE USUARIOS
-let usuarios; // colección compartida por las rutas
-let productos; // colección compartida por las rutas
+
+let usuarios; 
+let productos; 
 let posts;
 let proveedores;
 let pedidos;
@@ -310,6 +310,7 @@ async function init() {
     const r = await pedidos.insertOne(nuevo);
     res.status(201).json({ id_delivery: r.insertedId, ...nuevo });
   });
+  
 
 app.post('/mensajes', async (req, res) => {
   const { user1, user2 } = req.body;
@@ -329,10 +330,16 @@ app.post('/mensajes', async (req, res) => {
     const { id_user } = req.params;
     if (!ObjectId.isValid(id_user)) return res.status(400).json({ error: 'ID no válido' });
 
-    const { name, email, profile_picture } = req.body;
+    const { name, email, profile_picture, phone, street, city, state, postalcode, country} = req.body;
     const set = {};
     if (name !== undefined) set.name = name;
     if (email !== undefined) set.email = email;
+    if (phone !== undefined) set.phone = phone;
+    if (street !== undefined) set.street = street;
+    if (city !== undefined) set.city = city;
+    if (state !== undefined) set.state = state;
+    if (postalcode !== undefined) set.postalcode = postalcode;
+    if (country !== undefined) set.country = country;
     if (profile_picture !== undefined) set.profile_picture = profile_picture;
 
     if (Object.keys(set).length === 0) return res.status(400).json({ error: 'Nada que actualizar' });
