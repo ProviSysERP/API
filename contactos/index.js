@@ -27,6 +27,7 @@ let posts;
 let proveedores;
 let pedidos;
 let mensajes;
+let inventario;
 
 async function init() {
   const client = new MongoClient(uri);
@@ -40,6 +41,7 @@ async function init() {
   proveedores = db.collection('proveedores');
   pedidos = db.collection('pedidos');
   mensajes = db.collection('mensajes');
+  inventario = db.collection('inventario');
 
   // 👉 Ruta raíz de cortesía
   app.get('/', (req, res) => res.send('API Usuarios activa. Prueba GET /usuarios'));
@@ -49,6 +51,17 @@ async function init() {
     const docs = await usuarios.find().toArray();
     //console.log(docs);
     res.json(docs);
+  });
+   app.get('/inventario/porProveedor/:id_provider', async (req, res) => {
+    try {
+      const id_provider = parseInt(req.params.id_provider);
+      if (isNaN(id_provider)) return res.status(400).json({ error: 'id_provider inválido' });
+      const docs = await inventario.find({ id_provider }).toArray();
+      res.json(docs);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Error al obtener inventario' });
+    }
   });
 
   app.get('/pedidos', async (req, res) => {
@@ -323,6 +336,44 @@ app.post('/mensajes', async (req, res) => {
   const r = await mensajes.insertOne(nuevo);
   res.status(201).json({ id_conversation: r.insertedId, ...nuevo });
 });
+
+// POST /inventario  añadir un producto al inventario (o incrementar si ya existe)
+  app.post('/inventario', async (req, res) => {
+    try {
+      const { id_provider, id_product, quantity, unit_price } = req.body;
+      if (id_provider === undefined || id_product === undefined || quantity === undefined) {
+        return res.status(400).json({ error: 'id_provider, id_product y quantity son obligatorios' });
+      }
+      const now = new Date();
+      const q = Number(quantity);
+      if (isNaN(q) || q <= 0) return res.status(400).json({ error: 'quantity debe ser número positivo' });
+
+      // si ya existe registro para ese proveedor+producto -> incrementa
+      const existing = await inventario.findOne({ id_provider: Number(id_provider), id_product: Number(id_product) });
+      if (existing) {
+        const r = await inventario.updateOne(
+          { _id: existing._id },
+          { $inc: { quantity: q }, $set: { updatedAt: now, unit_price: unit_price ?? existing.unit_price } }
+        );
+        const updated = await inventario.findOne({ _id: existing._id });
+        return res.status(200).json(updated);
+      } else {
+        const nuevo = {
+          id_provider: Number(id_provider),
+          id_product: Number(id_product),
+          quantity: q,
+          unit_price: unit_price ? Number(unit_price) : 0,
+          createdAt: now,
+          updatedAt: now
+        };
+        const r = await inventario.insertOne(nuevo);
+        res.status(201).json({ _id: r.insertedId, ...nuevo });
+      }
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Error al añadir inventario' });
+    }
+  });
 
   // 🔁 PUT /usuarios/:id_user → actualizar (parcial: solo campos enviados)
   app.put('/usuarios/:id_user', async (req, res) => {
