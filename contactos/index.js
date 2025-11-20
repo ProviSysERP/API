@@ -465,6 +465,19 @@ async function init() {
     res.json(actualizado);
   });
 
+  app.put('/inventario/removeProduct/:id_user', async (req, res) => {
+  const { id_user } = req.params;
+  const { id_product } = req.body;
+
+  const r = await inventario.updateOne(
+    { id_user: parseInt(id_user) },
+    { $pull: { products: { id_product } } }
+  );
+
+  if (r.matchedCount === 0) return res.status(404).json({ error: 'No encontrado' });
+  res.json({ message: 'Producto eliminado correctamente' });
+});
+
   app.put('/inventario/modifyStock/:id_product', async (req, res) => {
   try {
     const { id_product } = req.params;
