@@ -52,6 +52,10 @@ async function init() {
     //console.log(docs);
     res.json(docs);
   });
+<<<<<<< HEAD
+=======
+  // GET /inventario -> todos (ya tienes uno). Añadimos por proveedor:
+>>>>>>> 752088439cd2b24d6dd9936953ba6f2abc5acd3e
   app.get('/inventario/porProveedor/:id_provider', async (req, res) => {
     try {
       const id_provider = parseInt(req.params.id_provider);
@@ -374,7 +378,11 @@ async function init() {
     res.status(201).json({ id_conversation: r.insertedId, ...nuevo });
   });
 
+<<<<<<< HEAD
   // POST /inventario  añadir un producto al inventario (o incrementar si ya existe)
+=======
+ // POST /inventario -> añadir un producto al inventario (o incrementar si ya existe)
+>>>>>>> 752088439cd2b24d6dd9936953ba6f2abc5acd3e
   app.post('/inventario', async (req, res) => {
     try {
       const { id_provider, id_product, quantity, unit_price } = req.body;
@@ -432,6 +440,52 @@ async function init() {
     res.json(actualizado);
   });
 
+
+
+  // PUT /inventario/:id -> reemplazar / actualizar fields
+  app.put('/inventario/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (!ObjectId.isValid(id)) return res.status(400).json({ error: 'ID inválido' });
+      const set = {};
+      const { quantity, unit_price } = req.body;
+      if (quantity !== undefined) set.quantity = Number(quantity);
+      if (unit_price !== undefined) set.unit_price = Number(unit_price);
+      set.updatedAt = new Date();
+      const r = await inventario.updateOne({ _id: new ObjectId(id) }, { $set: set });
+      if (r.matchedCount === 0) return res.status(404).json({ error: 'No encontrado' });
+      const actualizado = await inventario.findOne({ _id: new ObjectId(id) });
+      res.json(actualizado);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Error al actualizar inventario' });
+    }
+  });
+
+  // PATCH /inventario/:id -> ajustar cantidad (delta positivo o negativo)
+  app.patch('/inventario/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (!ObjectId.isValid(id)) return res.status(400).json({ error: 'ID inválido' });
+      const { delta } = req.body;
+      if (delta === undefined) return res.status(400).json({ error: 'delta es obligatorio' });
+      const n = Number(delta);
+      if (isNaN(n)) return res.status(400).json({ error: 'delta debe ser numérico' });
+
+      // only update if resulting quantity >= 0
+      const r = await inventario.findOneAndUpdate(
+        { _id: new ObjectId(id), quantity: { $gte: Math.max(0, -n) } }, // ensure enough if decreasing
+        { $inc: { quantity: n }, $set: { updatedAt: new Date() } },
+        { returnDocument: 'after' }
+      );
+      if (!r.value) return res.status(400).json({ error: 'No hay stock suficiente o item no encontrado' });
+      res.json(r.value);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Error al ajustar inventario' });
+    }
+  });
+
   // PUT /productos/:id_product → actualizar (parcial: solo campos enviados)
   app.put('/productos/:id_product', async (req, res) => {
     const { id_product } = req.params;
@@ -475,6 +529,20 @@ async function init() {
     if (r.deletedCount === 0) return res.status(404).json({ error: 'No encontrado' });
 
     res.status(204).send();
+  });
+
+  // DELETE /inventario/:id -> eliminar item de inventario
+  app.delete('/inventario/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (!ObjectId.isValid(id)) return res.status(400).json({ error: 'ID inválido' });
+      const r = await inventario.deleteOne({ _id: new ObjectId(id) });
+      if (r.deletedCount === 0) return res.status(404).json({ error: 'No encontrado' });
+      res.status(204).send();
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Error al eliminar inventario' });
+    }
   });
 
   // ❌ DELETE /productos/:id_product → borrar
