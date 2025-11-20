@@ -52,7 +52,8 @@ async function init() {
     //console.log(docs);
     res.json(docs);
   });
-   app.get('/inventario/porProveedor/:id_provider', async (req, res) => {
+  // GET /inventario -> todos (ya tienes uno). Añadimos por proveedor:
+  app.get('/inventario/porProveedor/:id_provider', async (req, res) => {
     try {
       const id_provider = parseInt(req.params.id_provider);
       if (isNaN(id_provider)) return res.status(400).json({ error: 'id_provider inválido' });
@@ -337,7 +338,7 @@ app.post('/mensajes', async (req, res) => {
   res.status(201).json({ id_conversation: r.insertedId, ...nuevo });
 });
 
-// POST /inventario  añadir un producto al inventario (o incrementar si ya existe)
+ // POST /inventario -> añadir un producto al inventario (o incrementar si ya existe)
   app.post('/inventario', async (req, res) => {
     try {
       const { id_provider, id_product, quantity, unit_price } = req.body;
@@ -395,6 +396,28 @@ app.post('/mensajes', async (req, res) => {
     res.json(actualizado);
   });
 
+
+
+  // PUT /inventario/:id -> reemplazar / actualizar fields
+  app.put('/inventario/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (!ObjectId.isValid(id)) return res.status(400).json({ error: 'ID inválido' });
+      const set = {};
+      const { quantity, unit_price } = req.body;
+      if (quantity !== undefined) set.quantity = Number(quantity);
+      if (unit_price !== undefined) set.unit_price = Number(unit_price);
+      set.updatedAt = new Date();
+      const r = await inventario.updateOne({ _id: new ObjectId(id) }, { $set: set });
+      if (r.matchedCount === 0) return res.status(404).json({ error: 'No encontrado' });
+      const actualizado = await inventario.findOne({ _id: new ObjectId(id) });
+      res.json(actualizado);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Error al actualizar inventario' });
+    }
+  });
+
   // PUT /productos/:id_product → actualizar (parcial: solo campos enviados)
   app.put('/productos/:id_product', async (req, res) => {
     const { id_product } = req.params;
@@ -438,6 +461,20 @@ app.post('/mensajes', async (req, res) => {
     if (r.deletedCount === 0) return res.status(404).json({ error: 'No encontrado' });
 
     res.status(204).send();
+  });
+
+  // DELETE /inventario/:id -> eliminar item de inventario
+  app.delete('/inventario/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (!ObjectId.isValid(id)) return res.status(400).json({ error: 'ID inválido' });
+      const r = await inventario.deleteOne({ _id: new ObjectId(id) });
+      if (r.deletedCount === 0) return res.status(404).json({ error: 'No encontrado' });
+      res.status(204).send();
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Error al eliminar inventario' });
+    }
   });
 
   // ❌ DELETE /productos/:id_product → borrar
