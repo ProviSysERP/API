@@ -27,6 +27,7 @@ let posts;
 let proveedores;
 let pedidos;
 let mensajes;
+let inventario;
 
 async function init() {
   const client = new MongoClient(uri);
@@ -40,6 +41,7 @@ async function init() {
   proveedores = db.collection('proveedores');
   pedidos = db.collection('pedidos');
   mensajes = db.collection('mensajes');
+  inventario = db.collection('inventario');
 
   // 👉 Ruta raíz de cortesía
   app.get('/', (req, res) => res.send('API Usuarios activa. Prueba GET /usuarios'));
@@ -188,6 +190,14 @@ async function init() {
       }
     });
 
+    app.get('/inventario/:id_user', async (req, res) => {
+      const { id_user } = req.params;
+      const id = parseInt(id_user);
+      const doc = await inventario.findOne({ id_user: id });
+      if (!doc) return res.status(404).json({ error: 'No encontrado' });
+      res.json(doc);
+    });
+
     // 🔎 GET /usuarios/:id_user → obtener uno por id_user
     app.get('/usuarios/:id_user', async (req, res) => {
       const { id_user } = req.params;
@@ -306,6 +316,53 @@ app.post('/mensajes', async (req, res) => {
     const actualizado = await usuarios.findOne({ _id: new ObjectId(id_user) });
     res.json(actualizado);
   });
+
+  app.put('/inventario/addProduct/:id_user', async (req, res) => {
+    const { id_user } = req.params;
+
+    const { id_product, stock, unit_price } = req.body;
+    const lastRestocked = new Date();
+    const newProduct = {
+      id_product,
+      stock,
+      unit_price,
+      lastRestocked
+    };
+    const r = await inventario.updateOne({ id_user: parseInt(id_user) }, { $push: { products: newProduct } });
+    if (r.matchedCount === 0) return res.status(404).json({ error: 'No encontrado' });
+    const actualizado = await usuarios.findOne({ id_user: parseInt(id_user) });
+    res.json(actualizado);
+  });
+
+  app.put('/inventario/modifyStock/:id_product', async (req, res) => {
+  try {
+    const { id_product } = req.params;
+    const { id_user, newStock } = req.body;
+
+    if (!id_user || newStock === undefined) {
+      return res.status(400).json({ message: "id_user y newStock son requeridos" });
+    }
+
+    const result = await inventario.updateOne(
+      { id_user: id_user, "products.id_product": Number(id_product) },
+      {
+        $set: {
+          "products.$.stock": newStock,
+          "products.$.lastRestocked": new Date()
+        }
+      }
+    );
+
+    if (result.modifiedCount === 0) {
+      return res.status(404).json({ message: "Producto no encontrado en inventario" });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("ERROR modifyStock:", err);
+    res.status(500).json({ error: "Error interno" });
+  }
+});
 
   // PUT /productos/:id_product → actualizar (parcial: solo campos enviados)
   app.put('/productos/:id_product', async (req, res) => {
