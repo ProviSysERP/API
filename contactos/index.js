@@ -418,6 +418,30 @@ app.post('/mensajes', async (req, res) => {
     }
   });
 
+  // PATCH /inventario/:id -> ajustar cantidad (delta positivo o negativo)
+  app.patch('/inventario/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (!ObjectId.isValid(id)) return res.status(400).json({ error: 'ID inválido' });
+      const { delta } = req.body;
+      if (delta === undefined) return res.status(400).json({ error: 'delta es obligatorio' });
+      const n = Number(delta);
+      if (isNaN(n)) return res.status(400).json({ error: 'delta debe ser numérico' });
+
+      // only update if resulting quantity >= 0
+      const r = await inventario.findOneAndUpdate(
+        { _id: new ObjectId(id), quantity: { $gte: Math.max(0, -n) } }, // ensure enough if decreasing
+        { $inc: { quantity: n }, $set: { updatedAt: new Date() } },
+        { returnDocument: 'after' }
+      );
+      if (!r.value) return res.status(400).json({ error: 'No hay stock suficiente o item no encontrado' });
+      res.json(r.value);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Error al ajustar inventario' });
+    }
+  });
+
   // PUT /productos/:id_product → actualizar (parcial: solo campos enviados)
   app.put('/productos/:id_product', async (req, res) => {
     const { id_product } = req.params;
