@@ -52,10 +52,7 @@ async function init() {
     //console.log(docs);
     res.json(docs);
   });
-<<<<<<< HEAD
-=======
   // GET /inventario -> todos (ya tienes uno). Añadimos por proveedor:
->>>>>>> 752088439cd2b24d6dd9936953ba6f2abc5acd3e
   app.get('/inventario/porProveedor/:id_provider', async (req, res) => {
     try {
       const id_provider = parseInt(req.params.id_provider);
@@ -378,11 +375,7 @@ async function init() {
     res.status(201).json({ id_conversation: r.insertedId, ...nuevo });
   });
 
-<<<<<<< HEAD
-  // POST /inventario  añadir un producto al inventario (o incrementar si ya existe)
-=======
  // POST /inventario -> añadir un producto al inventario (o incrementar si ya existe)
->>>>>>> 752088439cd2b24d6dd9936953ba6f2abc5acd3e
   app.post('/inventario', async (req, res) => {
     try {
       const { id_provider, id_product, quantity, unit_price } = req.body;
