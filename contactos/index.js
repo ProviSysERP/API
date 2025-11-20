@@ -611,6 +611,39 @@ async function init() {
     }
   });
 
+app.post('/inventario/create/:id_user', async (req, res) => {
+  try {
+    const { id_user } = req.params;
+    const id = parseInt(id_user);
+
+    if (isNaN(id)) return res.status(400).json({ error: 'id_user inválido' });
+
+    const existing = await inventario.findOne({ id_user: id });
+    if (existing) return res.status(400).json({ error: 'El inventario ya existe' });
+
+    const lastInv = await inventario.find().sort({ id_inventory: -1 }).limit(1).toArray();
+    const nextIdInventory = lastInv.length > 0 ? lastInv[0].id_inventory + 1 : 1;
+
+    const now = new Date();
+    const newInventory = {
+      id_inventory: nextIdInventory,
+      id_user: id,
+      products: [],
+      createdAt: now,
+      updatedAt: now
+    };
+
+    await inventario.insertOne(newInventory);
+
+    res.status(201).json({ message: 'Inventario creado correctamente', inventory: newInventory });
+
+  } catch (err) {
+    console.error('Error creando inventario:', err);
+    res.status(500).json({ error: 'Error al crear inventario', details: err.message });
+  }
+});
+
+
   // ▶️ Arrancar Express
   app.listen(port, () => {
     console.log(`🚀 API escuchando en http://localhost:${port}`);
