@@ -36,6 +36,9 @@ let usuarios; // colección compartida por las rutas
 let productos; // colección compartida por las rutas
 let posts;
 let proveedores;
+let pedidos;
+let mensajes;
+let inventario;
 
 
 async function init() {
@@ -48,6 +51,8 @@ async function init() {
   productos = db.collection('productos');
   posts = db.collection('posts');
   proveedores = db.collection('proveedores');
+  pedidos = db.collection('pedidos');
+  mensajes= db.collection('mensajes');
 
   // 👉 Ruta raíz de cortesía
   app.get('/', (req, res) => res.send('API Usuarios activa. Prueba GET /usuarios'));
@@ -299,20 +304,26 @@ async function init() {
   // 🔁 PUT /usuarios/:id_user → actualizar (parcial: solo campos enviados)
   app.put('/usuarios/:id_user', async (req, res) => {
     const { id_user } = req.params;
-    if (!ObjectId.isValid(id_user)) return res.status(400).json({ error: 'ID no válido' });
+    const id = parseInt(id_user);
 
-    const { name, email, profile_picture } = req.body;
+    const { name, email, profile_picture, phone, street, city, state, postalcode, country} = req.body;
     const set = {};
     if (name !== undefined) set.name = name;
     if (email  !== undefined) set.email  = email;
+    if (phone !== undefined) set.phone = phone;
+    if (street !== undefined) set.street = street;
+    if (city !== undefined) set.city = city;
+    if (state !== undefined) set.state = state;
+    if (postalcode !== undefined) set.postalcode = postalcode;
+    if (country !== undefined) set.country = country;
     if (profile_picture !== undefined) set.profile_picture = profile_picture;
 
     if (Object.keys(set).length === 0) return res.status(400).json({ error: 'Nada que actualizar' });
 
-    const r = await usuarios.updateOne({ _id: new ObjectId(id_user) }, { $set: set });
+    const r = await usuarios.updateOne({ id_user: id }, { $set: set });
     if (r.matchedCount === 0) return res.status(404).json({ error: 'No encontrado' });
 
-    const actualizado = await usuarios.findOne({ _id: new ObjectId(id_user) });
+    const actualizado = await usuarios.findOne({ id_user: id });
     res.json(actualizado);
   });
 
@@ -353,6 +364,287 @@ async function init() {
     if (r.deletedCount === 0) return res.status(404).json({ error: 'No encontrado' });
     res.status(204).send();
   });
+
+  app.post('/inventario/create/:id_user', async (req, res) => {
+  try {
+    const { id_user } = req.params;
+    const id = parseInt(id_user);
+
+    if (isNaN(id)) return res.status(400).json({ error: 'id_user inválido' });
+
+    const existing = await inventario.findOne({ id_user: id });
+    if (existing) return res.status(400).json({ error: 'El inventario ya existe' });
+
+    const lastInv = await inventario.find().sort({ id_inventory: -1 }).limit(1).toArray();
+    const nextIdInventory = lastInv.length > 0 ? lastInv[0].id_inventory + 1 : 1;
+
+    const now = new Date();
+    const newInventory = {
+      id_inventory: nextIdInventory,
+      id_user: id,
+      products: [],
+      createdAt: now,
+      updatedAt: now
+    };
+
+    await inventario.insertOne(newInventory);
+
+    res.status(201).json({ message: 'Inventario creado correctamente', inventory: newInventory });
+
+  } catch (err) {
+    console.error('Error creando inventario:', err);
+    res.status(500).json({ error: 'Error al crear inventario', details: err.message });
+  }
+});
+
+app.put('/inventario/removeProduct/:id_user', async (req, res) => {
+  const { id_user } = req.params;
+  const { id_product } = req.body;
+
+  const r = await inventario.updateOne(
+    { id_user: parseInt(id_user) },
+    { $pull: { products: { id_product } } }
+  );
+
+  if (r.matchedCount === 0) return res.status(404).json({ error: 'No encontrado' });
+  res.json({ message: 'Producto eliminado correctamente' });
+});
+
+  app.get('/inventario/porProveedor/:id_provider', async (req, res) => {
+    try {
+      const id_provider = parseInt(req.params.id_provider);
+      if (isNaN(id_provider)) return res.status(400).json({ error: 'id_provider inválido' });
+      const docs = await inventario.find({ id_provider }).toArray();
+      res.json(docs);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Error al obtener inventario' });
+    }
+  });
+
+  app.post('/proveedores/:id_provider/rating', async (req, res) => {
+    try {
+      const { id_provider } = req.params;
+      const { userId, score, comment } = req.body;
+
+      if (!userId || !score || !comment) {
+        return res.status(400).json({ error: 'userId, score y comment son obligatorios' });
+      }
+
+      const proveedor = await proveedores.findOne({ id_provider: parseInt(id_provider) });
+      if (!proveedor) return res.status(404).json({ error: 'Proveedor no encontrado' });
+
+      const usuario = await usuarios.findOne({ id_user: userId });
+      const author = usuario ? usuario.name : "Anónimo";
+
+      //Verificar si ya existe una reseña del usuario
+      const existingIndex = (proveedor.rating || []).findIndex(r => r.userId === userId);
+      const nuevaReseña = {
+        userId,
+        score,
+        comment,
+        author,
+        createdAt: new Date()
+      };
+
+      if (existingIndex >= 0) {
+        proveedor.rating[existingIndex] = nuevaReseña;
+      } else {
+        proveedor.rating = [...(proveedor.rating || []), nuevaReseña];
+      }
+
+      await proveedores.updateOne(
+        { id_provider: parseInt(id_provider) },
+        { $set: { rating: proveedor.rating, updatedAt: new Date() } }
+      );
+
+      res.status(201).json(nuevaReseña);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Error al agregar reseña' });
+    }
+  });
+
+
+  // DELETE /proveedores/:id_provider/rating/:id_review -> eliminar una reseña
+  app.delete('/proveedores/:id_provider/rating/:userId', async (req, res) => {
+    try {
+      const { id_provider, userId } = req.params;
+
+      const proveedor = await proveedores.findOne({ id_provider: parseInt(id_provider) });
+      if (!proveedor) return res.status(404).json({ error: 'Proveedor no encontrado' });
+
+      const newRating = (proveedor.rating || []).filter(r => r.userId !== parseInt(userId));
+
+      if (newRating.length === (proveedor.rating || []).length) {
+        return res.status(404).json({ error: 'Reseña no encontrada' });
+      }
+
+      await proveedores.updateOne(
+        { id_provider: parseInt(id_provider) },
+        { $set: { rating: newRating, updatedAt: new Date() } }
+      );
+
+      res.status(204).send();
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Error al eliminar la reseña' });
+    }
+  });
+
+  app.post('/inventario', async (req, res) => {
+    try {
+      const { id_provider, id_product, quantity, unit_price } = req.body;
+      if (id_provider === undefined || id_product === undefined || quantity === undefined) {
+        return res.status(400).json({ error: 'id_provider, id_product y quantity son obligatorios' });
+      }
+      const now = new Date();
+      const q = Number(quantity);
+      if (isNaN(q) || q <= 0) return res.status(400).json({ error: 'quantity debe ser número positivo' });
+
+      // si ya existe registro para ese proveedor+producto -> incrementa
+      const existing = await inventario.findOne({ id_provider: Number(id_provider), id_product: Number(id_product) });
+      if (existing) {
+        const r = await inventario.updateOne(
+          { _id: existing._id },
+          { $inc: { quantity: q }, $set: { updatedAt: now, unit_price: unit_price ?? existing.unit_price } }
+        );
+        const updated = await inventario.findOne({ _id: existing._id });
+        return res.status(200).json(updated);
+      } else {
+        const nuevo = {
+          id_provider: Number(id_provider),
+          id_product: Number(id_product),
+          quantity: q,
+          unit_price: unit_price ? Number(unit_price) : 0,
+          createdAt: now,
+          updatedAt: now
+        };
+        const r = await inventario.insertOne(nuevo);
+        res.status(201).json({ _id: r.insertedId, ...nuevo });
+      }
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Error al añadir inventario' });
+    }
+  });
+
+  app.post('/mensajes', async (req, res) => {
+  const { user1, user2 } = req.body;
+  if (!user1 || !user2) return res.status(400).json({ error: 'user1 y user2 son obligatorios' });
+  const newId = await mensajes.find().sort({ id_conversation: -1 }).limit(1).toArray();
+  const newConversationId = newId.length > 0 ? newId[0].id_conversation + 1 : 1;
+  const createdAt = new Date();
+  const updatedAt = new Date();
+  const nuevo = { id_conversation: newConversationId, user1, user2, messages: [], createdAt, updatedAt };
+
+  const r = await mensajes.insertOne(nuevo);
+  res.status(201).json({ id_conversation: r.insertedId, ...nuevo });
+});
+
+app.put('/mensajes/newMessage/:id_conversation', async (req, res) => {
+    const { id_conversation } = req.params;
+    const id = parseInt(id_conversation);
+    const { from_user, content } = req.body;
+    const newMessage = {
+      from_user,
+      content,
+      createdAt: new Date()
+    };
+
+    const r = await mensajes.updateOne({ id_conversation: id }, { $push: { messages: newMessage } });
+    if (r.matchedCount === 0) return res.status(404).json({ error: 'No encontrado' });
+    const actualizado = await mensajes.findOne({ id_conversation: id });
+    res.json(actualizado);
+  });
+
+  app.delete('/mensajes/:id_conversation', async (req, res) => {
+  try {
+    const { id_conversation } = req.params;
+    const id = parseInt(id_conversation);
+    if (isNaN(id)) return res.status(400).json({ error: 'ID no válido' });
+
+    const r = await mensajes.deleteOne({ id_conversation: id });
+    if (r.deletedCount === 0) return res.status(404).json({ error: 'Conversación no encontrada' });
+    res.status(204).send();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al eliminar la conversación' });
+  }
+});
+
+app.put('/inventario/addProduct/:id_user', async (req, res) => {
+    const { id_user } = req.params;
+
+    const { id_product, stock, unit_price } = req.body;
+    const lastRestocked = new Date();
+    const newProduct = {
+      id_product,
+      stock,
+      unit_price,
+      lastRestocked
+    };
+    const r = await inventario.updateOne({ id_user: parseInt(id_user) }, { $push: { products: newProduct } });
+    if (r.matchedCount === 0) return res.status(404).json({ error: 'No encontrado' });
+    const actualizado = await usuarios.findOne({ id_user: parseInt(id_user) });
+    res.json(actualizado);
+  });
+
+  app.put('/inventario/modifyStock/:id_product', async (req, res) => {
+  try {
+    const { id_product } = req.params;
+    const { id_user, newStock } = req.body;
+
+    if (!id_user || newStock === undefined) {
+      return res.status(400).json({ message: "id_user y newStock son requeridos" });
+    }
+
+    const result = await inventario.updateOne(
+      { id_user: id_user, "products.id_product": Number(id_product) },
+      {
+        $set: {
+          "products.$.stock": newStock,
+          "products.$.lastRestocked": new Date()
+        }
+      }
+    );
+
+    if (result.modifiedCount === 0) {
+      return res.status(404).json({ message: "Producto no encontrado en inventario" });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("ERROR modifyStock:", err);
+    res.status(500).json({ error: "Error interno" });
+  }
+});
+
+app.get('/mensajes/:id_user', async (req, res) => {
+
+    const { id_user } = req.params;
+    const id = parseInt(id_user);
+    const doc = await mensajes.find({ $or: [{ user1: id }, { user2: id }] }).toArray();
+
+    if (doc.length === 0) return res.status(404).json({ error: 'No encontrado' });
+
+    res.json(doc);
+  });
+
+app.get('/pedidos', async (req, res) => {
+    const docs = await pedidos.find().toArray();
+    res.json(docs);
+  });
+
+  app.post('/pedidos', async (req, res) => {
+  const { id_provider, id_user, products, total_price, address, status } = req.body;
+  if (!id_user || !products || !total_price) { return res.status(400).json({ error: 'id_user, products y total_price son obligatorios' });}
+  const createdAt = new Date();
+  const updatedAt = new Date();
+  const nuevo = {id_provider, id_user, products, total_price, address: address || null, status: status || "Pendiente", sent_date: null, received_date: null, createdAt, updatedAt};
+  const r = await pedidos.insertOne(nuevo);
+  res.status(201).json({id_delivery: r.insertedId, ...nuevo});
+});
 
   // ▶️ Arrancar Express
   app.listen(port, () => {
