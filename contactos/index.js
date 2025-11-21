@@ -3,13 +3,19 @@ import { MongoClient, ObjectId } from 'mongodb';
 import cors from 'cors';
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import dotenv from 'dotenv';
+import cookieParser from 'cookie-parser';
+
 
 const app = express();
 const port = 3000;
 
 app.use(express.json());
 // Habilitar CORS para todas las rutas
-app.use(cors());
+app.use(cors({
+  origin: "http://localhost:5173", // frontend
+  credentials: true
+}));
 
 
 // ---- Conexión a Mongo (una sola vez) ----
@@ -17,14 +23,20 @@ const uri = 'mongodb+srv://glu_db_user:8aa8ii1oo1@cluster0.te6deme.mongodb.net/'
 const dbName = 'ProviSys';
 
 // Clave secreta para JWT
-const SECRET_KEY = "MIDDLE-DEEP-HOME-TOOK-FLOOR";
-const EXPIRES_IN = "24h";
+dotenv.config();
+const ACCESS_EXPIRES_IN = "5m";
+const REFRESH_EXPIRES_IN = "30d";
+const SECRET_ACCESS = process.env.SECRET_ACCESS;
+const SECRET_REFRESH = process.env.SECRET_REFRESH;
+//cookieparser
+app.use(cookieParser());
 
 // USUARIOS---> APARTADO DE LA API PARA CARGAR DATOS DE USUARIOS
 let usuarios; // colección compartida por las rutas
 let productos; // colección compartida por las rutas
 let posts;
 let proveedores;
+
 
 async function init() {
   const client = new MongoClient(uri);
@@ -120,37 +132,84 @@ async function init() {
     });
   });
   
-  app.post('/Login', async (req, res) => {
+  app.post('/login', async (req, res) => {
       const { email, password } = req.body;
 
       // Buscar usuario por name
       const db_user = await usuarios.findOne({ email });
-
-      if (!db_user) {
-        return res.status(400).json({ detail: "Correo incorrecto" });
-      }
+      if (!db_user) return res.status(400).json({ detail: "Correo incorrecto" });
 
       // Comprobar contraseña
       const passwordMatch = await bcrypt.compare(password, db_user.passwordHash);
+      if (!passwordMatch) return res.status(400).json({ detail: "Contraseña incorrecta" });
 
+      //Creamos el payload (header(tipo de codigo(JWT en este caso))) (payload(valores usuario)) (encriptacion(clavesprivadas))
+      const payload = { sub: String(db_user.id_user) };
+        
+      // Creamos accestoken y refreshtoken
+      const accessToken = jwt.sign(payload, SECRET_ACCESS, { expiresIn: ACCESS_EXPIRES_IN });
+      const refreshToken = jwt.sign(payload, SECRET_REFRESH, { expiresIn: REFRESH_EXPIRES_IN });
 
-      if (!passwordMatch) {
-        return res.status(400).json({ detail: "Contraseña incorrecta" });
+      // Guardamos el token refresh en la bd 
+      await usuarios.updateOne({ id_user: db_user.id_user }, { $set: { currentRefreshToken: refreshToken } });
+
+      // Devolvemos por cookies el refreshtoken solamente para que no sea accesible de javascript (HTTP ONLY)
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+
+        maxAge: 30 * 24 * 60 * 60 * 1000
+      });
+
+      // Devolvemos el access token correcto
+      res.json({ message: "Login exitoso", access_token: accessToken, token_type: "bearer" });
+    });
+
+    app.post('/refresh', async (req, res) => {
+        const token = req.cookies?.refreshToken;
+        if(!token) return res.status(401).json({ detail: 'no_refresh_token'});
+
+        try {
+          const payload = jwt.verify(token, SECRET_REFRESH);
+
+          const user = await usuarios.findOne({ id_user: parseInt(payload.sub) });
+          if (!user || user.currentRefreshToken !== token) {
+            return res.status(401).json({ detail: 'invalid_refresh' });
+          }
+
+          const newAccess = jwt.sign({ sub: payload.sub }, SECRET_ACCESS, { expiresIn: ACCESS_EXPIRES_IN });
+          const newRefresh = jwt.sign({ sub: payload.sub }, SECRET_REFRESH, { expiresIn: REFRESH_EXPIRES_IN });
+          await usuarios.updateOne({ id_user: parseInt(payload.sub) }, { $set: { currentRefreshToken: newRefresh } });
+
+          res.cookie('refreshToken', newRefresh, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 30 * 24 * 60 * 60 * 1000
+          });
+
+          return res.json({ access_token: newAccess, token_type: "bearer" });
+
+        } catch (err) {
+          return res.status(401).json({ detail: 'invalid_refresh' });
+        }
+    });
+
+    app.post('/logout', async (req, res) => {
+      const token = req.cookies?.refreshToken;
+      if(token) {
+        try {
+          const payload = jwt.verify(token, SECRET_REFRESH);
+          await usuarios.updateOne({ id_user: parseInt(payload.sub) }, { $unset: { currentRefreshToken: "" } });
+        } catch (e) {
+
+        }
       }
 
-      // Crear token
-      const token = jwt.sign(
-        { sub: String(db_user.id_user) },
-        SECRET_KEY,
-        { expiresIn: EXPIRES_IN }
-      );
+      res.clearCookie('refreshToken', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' });
+      return res.json({ message: 'Sesion cerrada' });
 
-      return res.json({
-        message: "Login exitoso",
-        usuario: db_user.nombre_usuario,
-        access_token: token,
-        token_type: "bearer",
-      });
     });
 
     app.get('/usuarios/me', async (req, res) => {
@@ -158,25 +217,18 @@ async function init() {
       if (!authHeader) return res.status(401).json({ error: 'No autorizado' });
 
       // Obtener el token del header "Bearer <token>"
-      const token = authHeader.split(' ')[1];
-      if (!token) return res.status(401).json({ error: 'Token inválido' });
+        const token = authHeader.split(' ')[1];
+        if (!token) return res.status(401).json({ error: 'Token inválido' });
 
-      try {
-        // Verificar token JWT
-        const payload = jwt.verify(token, SECRET_KEY);
+        try {
+          const payload = jwt.verify(token, SECRET_ACCESS); // JWT lanzará error si el token no es válido
+          const usuario = await usuarios.findOne({ id_user: parseInt(payload.sub) });
+          if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado' });
 
-        // Buscar usuario por id_user almacenado en el token
-        const usuario = await usuarios.findOne({ id_user: parseInt(payload.sub) });
-
-        if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado' });
-
-        // Devolver solo los campos que quieras exponer
-        res.json({id_user: usuario.id_user,});
-        console.log(usuario.id_user);
-      } catch (err) {
-        console.warn("Token inválido o expirado");
-        return res.status(401).json({ error: 'Token inválido o expirado' });
-      }
+          res.json({ id_user: usuario.id_user });
+        } catch (err) {
+          return res.status(401).json({ error: 'Token inválido o expirado' });
+        }
     });
 
     // 🔎 GET /usuarios/:id_user → obtener uno por id_user
