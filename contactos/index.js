@@ -53,6 +53,7 @@ async function init() {
   proveedores = db.collection('proveedores');
   pedidos = db.collection('pedidos');
   mensajes= db.collection('mensajes');
+  inventario = db.collection('inventario');
 
   // 👉 Ruta raíz de cortesía
   app.get('/', (req, res) => res.send('API Usuarios activa. Prueba GET /usuarios'));
