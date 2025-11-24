@@ -549,6 +549,50 @@
     const r = await mensajes.insertOne(nuevo);
     res.status(201).json({ id_conversation: r.insertedId, ...nuevo });
   });
+app.get('/pedidos', async (req, res) => {
+  try {
+    const orders = await pedidos.find().toArray();
+
+    // IDs de proveedores
+    const providerIds = [...new Set(orders.map(o => o.id_provider))];
+
+    // Obtener datos reales de proveedores
+    const providers = await proveedores.find({ id_provider: { $in: providerIds } }).toArray();
+    const providerMap = Object.fromEntries(providers.map(p => [p.id_provider, p.name]));
+
+    // Mapear cada pedido con provider_name
+    const result = orders.map(order => ({
+      ...order,
+      provider_name: providerMap[order.id_provider] || "Proveedor no encontrado"
+    }));
+
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error obteniendo historial de pedidos" });
+  }
+});
+
+app.delete("/pedidos/:id", async (req, res) => {
+  const { id } = req.params;
+
+  if (!id) return res.status(400).json({ error: "ID del pedido requerido" });
+
+  try {
+    const result = await pedidos.deleteOne({ _id: new ObjectId(id) });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ error: "Pedido no encontrado" });
+    }
+
+    res.json({ message: "Pedido eliminado correctamente" });
+  } catch (err) {
+    console.error("Error eliminando pedido:", err);
+    res.status(500).json({ error: "Error eliminando pedido" });
+  }
+});
+
+
 
   app.put('/mensajes/newMessage/:id_conversation', async (req, res) => {
       const { id_conversation } = req.params;
