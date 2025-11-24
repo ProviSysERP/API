@@ -314,9 +314,14 @@
 
   // POST /Productos → crear
   app.post('/productos', async (req, res) => {
-    const { name, description, price } = req.body;
-    if (!name || !description || !price) return res.status(400).json({ error: 'nombre, descripción y precio son obligatorios' });
-    const nuevo = { name, description, category, price, quantity, images, status, createdAt, updatedAt };
+    const { name, description, price, category, images, id_provider } = req.body;
+    if (!name || !description || !price) return res.status(400).json({ error: 'Datos faltantes.' });
+    const statusProd = "in_stock";
+    const createdAt = new Date();
+    const updatedAt = new Date();
+    const id = await productos.find().sort({ id_product: -1 }).limit(1).toArray();
+    const id_product = id.length > 0 ? id[0].id_product + 1 : 1;
+    const nuevo = { id_product, id_provider, name, description, category, price, images, statusProd, createdAt, updatedAt };
     const r = await productos.insertOne(nuevo);
     res.status(201).json({ id_product: r.insertedId, ...nuevo });
   });
