@@ -65,12 +65,12 @@
       res.json(docs);
     });
 
-    // GET /productos -> obtener uno por id_product
-    app.get('/productos', async (req, res) => {
-      const docs = await productos.find().toArray();
-      //console.log(docs);
-      res.json(docs);
-    });
+  // GET /productos -> obtener uno por id_product
+  app.get('/productos', async (req, res) => {
+    const docs = await productos.find().toArray();
+    //console.log(docs);
+    res.json(docs);
+  });
 
     app.get('/posts',async (req,res)=>{
       const docs=await posts.find().toArray();
@@ -247,17 +247,17 @@
         res.json({ admin: usuario.admin == true });
       });
 
-      // 🔎 GET /usuarios/:id_user → obtener uno por id_user
-      app.get('/usuarios/:id_user', async (req, res) => {
-        const { id_user } = req.params;
-        const id = parseInt(id_user);
-        const doc = await usuarios.findOne({ id_user: id });
+    // 🔎 GET /usuarios/:id_user → obtener uno por id_user
+    app.get('/usuarios/:id_user', async (req, res) => {
+      const { id_user } = req.params;
+      const id = parseInt(id_user);
+      const doc = await usuarios.findOne({ id_user: id });
 
-        //console.log(doc);
-        if (!doc) return res.status(404).json({ error: 'No encontrado' });
-        res.json(doc);
-      });
-  //PROVEEDORES--> APARTADO DE LA API PARA CARGAR DATOS DE PROVEEDORES
+      //console.log(doc);
+      if (!doc) return res.status(404).json({ error: 'No encontrado' });
+      res.json(doc);
+    });
+//PROVEEDORES--> APARTADO DE LA API PARA CARGAR DATOS DE PROVEEDORES
 
     app.get('/proveedores', async (req, res) => {
       try {
@@ -303,14 +303,14 @@
       res.json(doc);
     });
 
-    // POST /Productos → crear
-    app.post('/productos', async (req, res) => {
-      const { name, description, price } = req.body;
-      if (!name || !description || !price) return res.status(400).json({ error: 'nombre, descripción y precio son obligatorios' });
-      const nuevo = { name, description, category, price, quantity, images, status, createdAt, updatedAt };
-      const r = await productos.insertOne(nuevo);
-      res.status(201).json({ id_product: r.insertedId, ...nuevo });
-    });
+  // POST /Productos → crear
+  app.post('/productos', async (req, res) => {
+    const { name, description, price } = req.body;
+    if (!name || !description || !price) return res.status(400).json({ error: 'nombre, descripción y precio son obligatorios' });
+    const nuevo = { name, description, category, price, quantity, images, status, createdAt, updatedAt };
+    const r = await productos.insertOne(nuevo);
+    res.status(201).json({ id_product: r.insertedId, ...nuevo });
+  });
 
     // 🔁 PUT /usuarios/:id_user → actualizar (parcial: solo campos enviados)
     app.put('/usuarios/:id_user', async (req, res) => {
@@ -350,11 +350,11 @@
       if (price !== undefined) set.price = price;
       if (Object.keys(set).length === 0) return res.status(400).json({ error: 'Nada que actualizar' });
 
-      const r = await productos.updateOne({ _id: new ObjectId(id_product) }, { $set: set });
-      if (r.matchedCount === 0) return res.status(404).json({ error: 'No encontrado' });
-      const actualizado = await productos.findOne({ _id: new ObjectId(id_product) });
-      res.json(actualizado);
-    });
+    const r = await productos.updateOne({ _id: new ObjectId(id_product) }, { $set: set });
+    if (r.matchedCount === 0) return res.status(404).json({ error: 'No encontrado' });
+    const actualizado = await productos.findOne({ _id: new ObjectId(id_product) });
+    res.json(actualizado);
+  });
 
     // ❌ DELETE /usuarios/:id_user → borrar
     app.delete('/usuarios/:id_user', async (req, res) => {
@@ -367,14 +367,14 @@
       res.status(204).send();
     });
 
-    // ❌ DELETE /productos/:id_product → borrar
-    app.delete('/productos/:id_product', async (req, res) => {
-      const { id_product } = req.params;
-      if (!ObjectId.isValid(id_product)) return res.status(400).json({ error: 'ID no válido' });
-      const r = await productos.deleteOne({ _id: new ObjectId(id_product) });
-      if (r.deletedCount === 0) return res.status(404).json({ error: 'No encontrado' });
-      res.status(204).send();
-    });
+  // ❌ DELETE /productos/:id_product → borrar
+  app.delete('/productos/:id_product', async (req, res) => {
+    const { id_product } = req.params;
+    if (!ObjectId.isValid(id_product)) return res.status(400).json({ error: 'ID no válido' });
+    const r = await productos.deleteOne({ _id: new ObjectId(id_product) });
+    if (r.deletedCount === 0) return res.status(404).json({ error: 'No encontrado' });
+    res.status(204).send();
+  });
 
     app.post('/inventario/create/:id_user', async (req, res) => {
     try {
