@@ -237,6 +237,16 @@ async function init() {
     }
     });
 
+    app.get('/usuarios/:id_user/admin', async (req,res) => {
+      const { id_user } = req.params;
+
+      const usuario = await usuarios.findOne({ id_user: parseInt(id_user) });
+
+      if (!usuario) return res.status(404).json({ error: "Usuario no encontrado" });
+
+      res.json({ admin: usuario.admin == true });
+    });
+
     // 🔎 GET /usuarios/:id_user → obtener uno por id_user
     app.get('/usuarios/:id_user', async (req, res) => {
       const { id_user } = req.params;
