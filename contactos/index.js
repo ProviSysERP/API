@@ -356,6 +356,48 @@ async function init() {
     res.json(actualizado);
   });
 
+    // 🔁 PUT /proveedores/:id_provider → actualizar (parcial: solo campos enviados)
+  app.put('/proveedores/:id_provider', async (req, res) => {
+    const { id_provider } = req.params;
+    const id = parseInt(id_provider);
+
+    const {
+      companyName,
+      description,
+      categories,
+      latitude,
+      longitude,
+      availability,
+      image,
+      userId
+    } = req.body;
+
+    const set = {};
+    if (companyName !== undefined) set.companyName = companyName;
+    if (description !== undefined) set.description = description;
+    if (categories !== undefined) set.categories = categories;
+    if (latitude !== undefined) set.latitude = latitude;
+    if (longitude !== undefined) set.longitude = longitude;
+    if (availability !== undefined) set.availability = availability;
+    if (image !== undefined) set.image = image;
+    if (userId !== undefined) set.userId = userId;
+
+    if (Object.keys(set).length === 0) {
+      return res.status(400).json({ error: 'Nada que actualizar' });
+    }
+
+    try {
+      const r = await proveedores.updateOne({ id_provider: id }, { $set: set });
+      if (r.matchedCount === 0) return res.status(404).json({ error: 'No encontrado' });
+
+      const actualizado = await proveedores.findOne({ id_provider: id });
+      res.json(actualizado);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Error interno del servidor' });
+    }
+  });
+
   // ❌ DELETE /usuarios/:id_user → borrar
   app.delete('/usuarios/:id_user', async (req, res) => {
     const { id_user } = req.params;
