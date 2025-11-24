@@ -303,6 +303,15 @@
       res.json(doc);
     });
 
+    app.get('/productos/porProv/:id_provider', async (req, res) => {
+      const { id_provider } = req.params;
+      const id = parseInt(id_provider);
+      const doc = await productos.findOne({ id_provider: id });
+      //console.log(doc);
+      if (!doc) return res.status(404).json({ error: 'No encontrado' });
+      res.json(doc);
+    });
+
   // POST /Productos → crear
   app.post('/productos', async (req, res) => {
     const { name, description, price } = req.body;
