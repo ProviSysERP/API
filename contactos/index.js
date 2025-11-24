@@ -250,10 +250,11 @@ async function init() {
     // 🔎 GET /usuarios/:id_user → obtener uno por id_user
     app.get('/usuarios/:id_user', async (req, res) => {
       const { id_user } = req.params;
+      console.log(id_user);
       const id = parseInt(id_user);
+      console.log(id);
       const doc = await usuarios.findOne({ id_user: id });
-
-      //console.log(doc);
+      console.log(doc.provider);
       if (!doc) return res.status(404).json({ error: 'No encontrado' });
       res.json(doc);
     });
