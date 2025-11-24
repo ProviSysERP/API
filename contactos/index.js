@@ -379,8 +379,8 @@
   // ❌ DELETE /productos/:id_product → borrar
   app.delete('/productos/:id_product', async (req, res) => {
     const { id_product } = req.params;
-    if (!ObjectId.isValid(id_product)) return res.status(400).json({ error: 'ID no válido' });
-    const r = await productos.deleteOne({ _id: new ObjectId(id_product) });
+    const id = parseInt(id_product);
+    const r = await productos.deleteOne({ id_product: id});
     if (r.deletedCount === 0) return res.status(404).json({ error: 'No encontrado' });
     res.status(204).send();
   });
