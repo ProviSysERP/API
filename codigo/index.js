@@ -44,7 +44,7 @@
   async function init() {
     const client = new MongoClient(uri);
     await client.connect();
-    console.log('✅ Conectado a MongoDB');
+    console.log('Conectado a MongoDB');
 
     const db = client.db(dbName);
     usuarios = db.collection('usuarios');
@@ -55,10 +55,10 @@
     mensajes= db.collection('mensajes');
     inventario = db.collection('inventario');
 
-    // 👉 Ruta raíz de cortesía
+    // Ruta raíz de cortesía
     app.get('/', (req, res) => res.send('API Usuarios activa. Prueba GET /usuarios'));
 
-    // 📄 GET /usuarios → listar todos
+    // GET /usuarios → listar todos
     app.get('/usuarios', async (req, res) => {
       const docs = await usuarios.find().toArray();
       //console.log(docs);
@@ -747,9 +747,9 @@ app.delete("/pedidos/:id", async (req, res) => {
     res.status(201).json({id_delivery: r.insertedId, ...nuevo});
   });
 
-    // ▶️ Arrancar Express
+    //Arrancar Express
     app.listen(port, () => {
-      console.log(`🚀 API escuchando en http://localhost:${port}`);
+      console.log(`API escuchando en http://localhost:${port}`);
     });
   }
 
