@@ -413,9 +413,10 @@ app.put('/inventario/removeProduct/:id_user', async (req, res) => {
 
   app.get('/inventario/porProveedor/:id_provider', async (req, res) => {
     try {
-      const id_provider = parseInt(req.params.id_provider);
+      const { id_provider } =req.params
+      const id = parseInt(id_provider);
       if (isNaN(id_provider)) return res.status(400).json({ error: 'id_provider inválido' });
-      const docs = await inventario.find({ id_provider }).toArray();
+      const docs = await inventario.findOne({ id_user: id });
       res.json(docs);
     } catch (err) {
       console.error(err);
