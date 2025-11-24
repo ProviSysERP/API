@@ -355,9 +355,9 @@
     // ❌ DELETE /usuarios/:id_user → borrar
     app.delete('/usuarios/:id_user', async (req, res) => {
       const { id_user } = req.params;
-      if (!ObjectId.isValid(id_user)) return res.status(400).json({ error: 'ID no válido' });
+      const id = parseInt(id_user);
 
-      const r = await usuarios.deleteOne({ _id: new ObjectId(id_user) });
+      const r = await usuarios.deleteOne({ id_user: id });
       if (r.deletedCount === 0) return res.status(404).json({ error: 'No encontrado' });
 
       res.status(204).send();
