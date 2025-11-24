@@ -347,24 +347,6 @@
       res.json(actualizado);
     });
 
-    // PUT /productos/:id_product → actualizar (parcial: solo campos enviados)
-    app.put('/productos/:id_product', async (req, res) => {
-      const { id_product } = req.params;
-      if (!ObjectId.isValid(id_product)) return res.status(400).json({ error: 'ID no válido' });
-
-      const { name, description, price } = req.body;
-      const set = {};
-      if (name !== undefined) set.name = name;
-      if (description  !== undefined) set.description  = description;
-      if (price !== undefined) set.price = price;
-      if (Object.keys(set).length === 0) return res.status(400).json({ error: 'Nada que actualizar' });
-
-    const r = await productos.updateOne({ _id: new ObjectId(id_product) }, { $set: set });
-    if (r.matchedCount === 0) return res.status(404).json({ error: 'No encontrado' });
-    const actualizado = await productos.findOne({ _id: new ObjectId(id_product) });
-    res.json(actualizado);
-  });
-
     // ❌ DELETE /usuarios/:id_user → borrar
     app.delete('/usuarios/:id_user', async (req, res) => {
       const { id_user } = req.params;
