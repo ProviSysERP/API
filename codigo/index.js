@@ -755,6 +755,6 @@ app.delete("/pedidos/:id", async (req, res) => {
 
   // Iniciar conexión + rutas
   init().catch(err => {
-    console.error('❌ Error iniciando:', err);
+    console.error('Error iniciando:', err);
     process.exit(1);
   });
