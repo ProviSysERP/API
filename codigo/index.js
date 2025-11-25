@@ -671,6 +671,30 @@ app.delete("/pedidos/:id", async (req, res) => {
       res.status(500).json({ error: "Error interno" });
     }
   });
+  app.patch("/pedidos/:id", async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  if (!status) return res.status(400).json({ error: "Estado requerido" });
+
+  try {
+    const result = await pedidos.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { status } }
+    );
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ error: "Pedido no encontrado" });
+    }
+
+    res.json({ message: "Estado actualizado correctamente" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error actualizando estado" });
+  }
+});
+
+
 
   app.get('/mensajes/:id_user', async (req, res) => {
 
