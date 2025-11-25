@@ -44,7 +44,7 @@
   async function init() {
     const client = new MongoClient(uri);
     await client.connect();
-    console.log('✅ Conectado a MongoDB');
+    console.log(' Conectado a MongoDB');
 
     const db = client.db(dbName);
     usuarios = db.collection('usuarios');
@@ -55,10 +55,10 @@
     mensajes= db.collection('mensajes');
     inventario = db.collection('inventario');
 
-    // 👉 Ruta raíz de cortesía
+    // Ruta raíz de cortesía
     app.get('/', (req, res) => res.send('API Usuarios activa. Prueba GET /usuarios'));
 
-    // 📄 GET /usuarios → listar todos
+    // GET /usuarios → listar todos
     app.get('/usuarios', async (req, res) => {
       const docs = await usuarios.find().toArray();
       //console.log(docs);
@@ -247,7 +247,7 @@
         res.json({ admin: usuario.admin == true });
       });
 
-    // 🔎 GET /usuarios/:id_user → obtener uno por id_user
+    // GET /usuarios/:id_user → obtener uno por id_user
     app.get('/usuarios/:id_user', async (req, res) => {
       const { id_user } = req.params;
       const id = parseInt(id_user);
@@ -326,7 +326,7 @@
     res.status(201).json({ id_product: r.insertedId, ...nuevo });
   });
 
-    // 🔁 PUT /usuarios/:id_user → actualizar (parcial: solo campos enviados)
+    // PUT /usuarios/:id_user → actualizar (parcial: solo campos enviados)
     app.put('/usuarios/:id_user', async (req, res) => {
       const { id_user } = req.params;
       const id = parseInt(id_user);
@@ -352,7 +352,7 @@
       res.json(actualizado);
     });
 
-    // ❌ DELETE /usuarios/:id_user → borrar
+    // DELETE /usuarios/:id_user → borrar
     app.delete('/usuarios/:id_user', async (req, res) => {
       const { id_user } = req.params;
       const id = parseInt(id_user);
@@ -363,7 +363,7 @@
       res.status(204).send();
     });
 
-  // ❌ DELETE /productos/:id_product → borrar
+  // DELETE /productos/:id_product → borrar
   app.delete('/productos/:id_product', async (req, res) => {
     const { id_product } = req.params;
     const id = parseInt(id_product);
@@ -703,14 +703,14 @@
     res.status(201).json({id_delivery: r.insertedId, ...nuevo});
   });
 
-    // ▶️ Arrancar Express
+    // Arrancar Express
     app.listen(port, () => {
-      console.log(`🚀 API escuchando en http://localhost:${port}`);
+      console.log(` API escuchando en http://localhost:${port}`);
     });
   }
 
   // Iniciar conexión + rutas
   init().catch(err => {
-    console.error('❌ Error iniciando:', err);
+    console.error(' Error iniciando:', err);
     process.exit(1);
   });
